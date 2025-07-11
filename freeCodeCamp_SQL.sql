@@ -127,7 +127,7 @@ CREATE TABLE works_with (
   FOREIGN KEY(emp_id) REFERENCES employee(emp_id) ON DELETE CASCADE,
   FOREIGN KEY(client_id) REFERENCES client(client_id) ON DELETE CASCADE
 );
---composite key
+-- composite key
 CREATE TABLE branch_supplier (
   branch_id INT,
   supplier_name VARCHAR(40),
@@ -136,7 +136,7 @@ CREATE TABLE branch_supplier (
   FOREIGN KEY(branch_id) REFERENCES branch(branch_id) ON DELETE CASCADE
 );
 
---inserting information
+-- inserting information
 -- -----------------------------------------------------------------------------
 
 -- Corporate
@@ -308,7 +308,161 @@ SELECT supplier_name, branch_supplier.branch_id
 FROM branch_supplier;
 
 -- Find a list of all money spent or earned by the company
+SELECT salary
+FROM employee
+UNION
+SELECT total_sales
+FROM works_with;
+
+# JOIN
+-- inserting db for the practice
+INSERT INTO BRANCH VALUES(4,'BUFFALO', NULL, NULL);
+
+SELECT *
+FROM branch;
+
+-- Find all branches and the names of their managers
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+LEFT JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
+SELECT employee.emp_id, employee.first_name, branch.branch_name
+FROM employee
+RIGHT JOIN branch
+ON employee.emp_id = branch.mgr_id;
+
+# Nested queries
+-- Find names of all employees who have
+-- sold over 30,000 to a single client
+SELECT works_with.emp_id
+FROM works_with
+WHERE  works_with.total_sales > 30000;
+
+--
+
+SELECT employee.first_name, employee.last_name
+FROM employee
+WHERE employee.emp_id IN (
+	SELECT works_with.emp_id
+	FROM works_with
+	WHERE  works_with.total_sales > 30000
+);
 
 
+-- Find all clients who are handled by the branch
+-- that Michael Scott manages
+-- Assume you know Mitchael's ID
 
+-- 1) Find branch_id that Michael manages
+SELECT  branch.branch_id
+FROM branch
+WHERE branch.mgr_id = 102;
+
+-- 2) clients that use that branch_id
+
+SELECT client.client_name
+FROM client
+WHERE client.branch_id = (
+	SELECT  branch.branch_id
+	FROM branch
+	WHERE branch.mgr_id = 102
+	LIMIT 1
+);
+
+# ON DELETE
+
+CREATE TABLE branch (
+  branch_id INT PRIMARY KEY,
+  branch_name VARCHAR(40),
+  mgr_id INT,
+  mgr_start_date DATE,
+  FOREIGN KEY(mgr_id) REFERENCES employee(emp_id) ON DELETE SET NULL
+);
+-- if the emp_id in theemployee table gets deleted, mgr_id is set to NULL
+-- mgr_id is just a foreign key, not absolutely essential 
+DELETE FROM employee
+WHERE emp_id = 102;
+
+SELECT * from employee;
+
+CREATE TABLE branch_supplier (
+  branch_id INT,
+  supplier_name VARCHAR(40),
+  supply_type VARCHAR(40),
+  PRIMARY KEY(branch_id, supplier_name),
+  FOREIGN KEY(branch_id) REFERENCES branch(branch_id) ON DELETE CASCADE
+);
+-- if the branch_id stored as the foreign key deleted, we are going to delete all the rows with the value
+-- branch_id is the absolutely rucial, it is also a primary key, compositie key
+DELETE FROM branch
+WHERE  branch_id = 2;
+
+SELECT *  from branch_supplier;
+
+#triggers: block of sql codes which will define certian actions that should happen when a certin operation gets performed.
+
+CREATE TABLE trigger_test (
+	message VARCHAR(100)
+);
+
+-- before anything gets inserted on the employee table, we are going to trigger a trigger_test
+-- automating
+-- delimiter - change the mysql delimiter
+-- you need the
+
+DELIMITER $$
+CREATE
+	TRIGGER my_trigger BEFORE INSERT
+	ON employee
+	FOR EACH ROW BEGIN
+	INSERT INTO trigger_test VALUES('added new employee');
+	END$$
+DELIMITER ; 
+
+
+INSERT INTO employee
+VALUES(109, 'Oscar', 'Martinez', '1968-02-19', 'M', 69000, 106, 3);
+
+SELECT * FROM trigger_test;
+
+SHOW TRIGGERS;
+DESCRIBE trigger_test;
+
+
+DELIMITER $$
+CREATE
+	TRIGGER my_trigger1 BEFORE INSERT
+	ON employee
+	FOR EACH ROW BEGIN
+	INSERT INTO trigger_test VALUES(NEW.first_name);
+	END$$
+DELIMITER ; 
+
+INSERT INTO employee
+VALUES(110, 'Kevin', 'Malone', '1978-02-19', 'M', 69000, 106, 3);
+
+-- 
+DELIMITER $$
+CREATE
+	TRIGGER my_trigger2 BEFORE INSERT
+	ON employee
+	FOR EACH ROW BEGIN
+		IF NEW.sex = 'M' THEN
+			INSERT INTO trigger_test VALUES('added male employee');
+		ELSEIF New.sex = 'F' THEN
+			INSERT INTO trigger_test VALUES('added female');
+		ELSE
+			INSERT INTO trgger_test VALUES('added other employee');
+		END IF;
+	END$$
+DELIMITER ; 
+
+INSERT INTO employee
+VALUES(111, 'Pam', 'Malone', '1988-02-19', 'F', 69000, 106, 3);
 
